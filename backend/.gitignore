@@ -1,0 +1,11 @@
+# Real configuration, including JWT_SECRET and any API keys. Only .env.example
+# is tracked. Both config.go and .env.example already promise this file is
+# ignored — this is the entry that makes that true.
+.env
+
+# Local SQLite database. Regenerate with `go run ./cmd/api -seed-demo` rather
+# than committing a binary that every branch would conflict on.
+app.db
+app.db-journal
+app.db-wal
+app.db-shm
