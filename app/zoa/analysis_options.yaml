@@ -1,0 +1,41 @@
+# Static analysis for the Zoa app.
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  language:
+    # Implicit downcasts hide real type bugs; the JSON parsers cast explicitly.
+    strict-casts: true
+
+  errors:
+    # These almost always mean a half-finished edit rather than a choice.
+    unused_import: error
+    unused_local_variable: error
+    dead_code: error
+    # An unawaited future here means a lost API call or a navigation race —
+    # both hard to spot at runtime, so fail the build instead.
+    unawaited_futures: error
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
+
+linter:
+  rules:
+    # Async safety.
+    unawaited_futures: true
+    avoid_slow_async_io: true
+
+    # Conventions this codebase already follows.
+    prefer_single_quotes: true
+    directives_ordering: true
+    use_full_hex_values_for_flutter_colors: true
+
+# Deliberately NOT enabled: require_raw_strings, require_trailing_commas,
+# strict-raw-types. The first two are formatting preferences better handled by
+# `dart format`, and strict-raw-types would reject the intentional `is Map`
+# shape checks in api_exception.dart, which guard against a captive portal
+# returning HTML where JSON was expected.

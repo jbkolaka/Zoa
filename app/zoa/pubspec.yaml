@@ -1,0 +1,83 @@
+name: zoa
+description: "Zoa — recycling rewards for Kenyan households and hotels."
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # HTTP client. dio (over http) for the interceptor hook — Phase 1 attaches the
+  # JWT there rather than threading a token through every call site.
+  dio: ^5.4.0
+
+  # State management. provider over riverpod: smaller API surface, and it has
+  # not churned across majors the way riverpod 1→2 did.
+  provider: ^6.1.0
+
+  # JWT storage. Backed by the Android Keystore / iOS Keychain rather than
+  # SharedPreferences, so the token is not readable from a rooted device's
+  # plaintext prefs file.
+  flutter_secure_storage: ^9.0.0
+
+  # Camera and gallery access for Phase 2.5 photo classification. image_picker
+  # delegates to the platform's own camera and picker UI, so there is no
+  # in-app camera preview to build or permission flow to hand-roll.
+  image_picker: ^1.0.7
+
+  # QR rendering for the Phase 4 redemption code. Pure Dart — it paints the
+  # matrix itself rather than wrapping a platform library, so there is nothing
+  # extra to declare per platform and it renders in a widget test. The package
+  # has not been released in some years; it is pinned here because it was
+  # verified to compile *and* paint under this Flutter version, which is the
+  # only thing that actually matters for a code a cashier has to scan.
+  qr_flutter: ^4.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
+  # Fonts are bundled rather than fetched at runtime (google_fonts). A runtime
+  # fetch that fails falls back silently to a system face, which would quietly
+  # destroy the visual identity on a bad connection — not acceptable on stage.
+  fonts:
+    - family: Fraunces
+      fonts:
+        - asset: assets/fonts/Fraunces-300.ttf
+          weight: 300
+        - asset: assets/fonts/Fraunces-500.ttf
+          weight: 500
+        - asset: assets/fonts/Fraunces-500Italic.ttf
+          weight: 500
+          style: italic
+        - asset: assets/fonts/Fraunces-600.ttf
+          weight: 600
+        - asset: assets/fonts/Fraunces-700.ttf
+          weight: 700
+
+    - family: IBM Plex Sans
+      fonts:
+        - asset: assets/fonts/IBMPlexSans-400.ttf
+          weight: 400
+        - asset: assets/fonts/IBMPlexSans-500.ttf
+          weight: 500
+        - asset: assets/fonts/IBMPlexSans-600.ttf
+          weight: 600
+        - asset: assets/fonts/IBMPlexSans-700.ttf
+          weight: 700
+
+    - family: IBM Plex Mono
+      fonts:
+        - asset: assets/fonts/IBMPlexMono-400.ttf
+          weight: 400
+        - asset: assets/fonts/IBMPlexMono-500.ttf
+          weight: 500
+        - asset: assets/fonts/IBMPlexMono-600.ttf
+          weight: 600
