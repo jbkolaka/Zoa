@@ -8,6 +8,13 @@
 # into a Flutter upgrade and a build failure nobody changed anything to cause.
 set -euo pipefail
 
+# Run from the Flutter project regardless of the caller's directory. render.yaml
+# sets no rootDir (that would corrupt staticPublishPath), so Render invokes this
+# from the repo root — where there is no pubspec.yaml and `flutter pub get`
+# would fail.
+cd "$(dirname "$0")"
+echo "==> building in $(pwd)"
+
 FLUTTER_VERSION=3.47.0
 FLUTTER_HOME="${FLUTTER_HOME:-${HOME}/flutter}"
 

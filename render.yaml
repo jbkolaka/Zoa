@@ -24,10 +24,15 @@ services:
     runtime: docker
     plan: free
     region: oregon
-    rootDir: backend
-    # dockerfilePath and dockerContext resolve from the repo root, NOT from
-    # rootDir — a Render-specific asymmetry that silently breaks the build if
-    # you write ./Dockerfile here and expect rootDir to apply.
+    # No rootDir on purpose. Render's schema documents dockerfilePath and
+    # dockerContext as "relative to the repo root", but rootDir is still
+    # prepended to them — `rootDir: backend` with `dockerContext: ./backend`
+    # asks for backend/backend and fails with:
+    #   invalid local: resolve : lstat /opt/render/project/src/backend/backend
+    # Leaving rootDir out means there is nothing to prepend, so these paths
+    # behave exactly as documented. The cost is that a push touching only the
+    # Flutter app also rebuilds this service, which is cheap next to a deploy
+    # that fails on a path that looks correct.
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     healthCheckPath: /health
@@ -74,9 +79,11 @@ services:
   - type: web
     name: zoa-web
     runtime: static
-    rootDir: app/zoa
-    buildCommand: ./render-build.sh
-    # Also relative to the repo root, so rootDir is repeated here.
+    # rootDir omitted here for the same reason as zoa-api: it would be prepended
+    # to staticPublishPath and send Render looking for app/zoa/app/zoa/build/web.
+    # The build command therefore runs from the repo root, and render-build.sh
+    # cd's to its own directory to find pubspec.yaml.
+    buildCommand: ./app/zoa/render-build.sh
     staticPublishPath: ./app/zoa/build/web
     routes:
       # Flutter web routes on the client, so a deep link or a refresh on any
