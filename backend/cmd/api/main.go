@@ -29,21 +29,25 @@ import (
 
 func main() {
 	migrateOnly := flag.Bool("migrate-only", false, "apply migrations, print the schema state, then exit")
-	seedDemo := flag.Bool("seed-demo", false, "create the demo accounts (recycler, collector, partner staff, admin) if missing")
+	seedDemo := flag.Bool("seed-demo", false, "create the demo accounts (recycler, two collectors, partner staff, admin) if missing")
 	flag.Parse()
-
-	// A container image is configured with environment variables, not argv, so
-	// the same seeding is reachable through ZOA_SEED_DEMO. The free-tier deploy
-	// depends on it: that filesystem is ephemeral, so every restart and every
-	// wake from spin-down starts on an empty database, and without re-seeding
-	// there would be no account left to sign in with. Safe to leave on — seeding
-	// is idempotent and never modifies an account that already exists.
-	shouldSeed := *seedDemo || envTrue("ZOA_SEED_DEMO")
 
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("config: %v", err)
 	}
+
+	// Seeding is reachable three ways, because a container cannot be handed argv
+	// the way a shell can: the -seed-demo flag, ZOA_SEED_DEMO, or APP_ENV=demo.
+	//
+	// APP_ENV=demo is the one that matters on a host with no persistent disk.
+	// There, every restart and every wake from spin-down begins on an empty
+	// database, and an environment that calls itself a demo but has no account to
+	// sign in as is simply broken — so "demo" implies the demo cast exists rather
+	// than making that hinge on a second variable that can quietly go unset.
+	// Never fires in dev or prod. Idempotent, so a re-run cannot reset a password
+	// mid-walkthrough.
+	shouldSeed := *seedDemo || envTrue("ZOA_SEED_DEMO") || cfg.Env == "demo"
 
 	conn, err := db.Open(cfg.DBPath)
 	if err != nil {

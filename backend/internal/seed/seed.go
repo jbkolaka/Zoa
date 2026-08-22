@@ -25,13 +25,22 @@ type DemoUser struct {
 	Role  string
 }
 
-// DemoUsers is the cast for the demo: a recycler to submit, a collector to
+// DemoUsers is the cast for the demo: a recycler to submit, two collectors to
 // verify, partner staff to accept a code at checkout, and an admin for stats.
+//
+// Phones stay in E.164 with the +254 prefix because login matches the stored
+// string exactly — the same number saved as 0712000005 would not authenticate.
+//
+// The recycler and partner-staff entries are not padding. POST /submissions and
+// POST /submissions/classify both sit behind DenyRole(collector), so a collector
+// can neither submit nor photograph; drop the recycler and there is nothing for
+// a collector to verify. Removing partner staff removes the redemption step.
 var DemoUsers = []DemoUser{
 	{Phone: "+254712000001", Name: "Amina Wanjiru", Role: models.RoleUser},
 	{Phone: "+254712000002", Name: "Joseph Kariuki", Role: models.RoleCollector},
 	{Phone: "+254712000003", Name: "Naivas Till 4", Role: models.RolePartnerStaff},
 	{Phone: "+254712000004", Name: "Zoa Operations", Role: models.RoleAdmin},
+	{Phone: "+254712000005", Name: "Grace Achieng", Role: models.RoleCollector},
 }
 
 // Result reports what seeding did.
