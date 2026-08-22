@@ -1,0 +1,95 @@
+# Zoa on Render — free tier.
+#
+#   zoa-api   Docker web service : the Go backend
+#   zoa-web   static site        : the Flutter web build
+#
+# Deploy: Render Dashboard → New → Blueprint → pick this repo.
+#
+# ---------------------------------------------------------------------------
+# The free tier has no persistent disks, so the SQLite file sits on an ephemeral
+# filesystem and is wiped on every deploy, every restart, and every wake from
+# spin-down. ZOA_SEED_DEMO makes the API recreate the demo accounts at boot, so
+# the deployment always comes up with something to sign in as instead of an empty
+# user table. Accept the consequence: accounts registered, submissions filed, and
+# points earned during a session are gone once the service sleeps.
+#
+# A free web service also spins down after 15 minutes without traffic and takes
+# about a minute to wake. The static site does not spin down, so the UI loads
+# instantly and only the first API call pays that cost.
+# ---------------------------------------------------------------------------
+
+services:
+  - type: web
+    name: zoa-api
+    runtime: docker
+    plan: free
+    region: oregon
+    rootDir: backend
+    # dockerfilePath and dockerContext resolve from the repo root, NOT from
+    # rootDir — a Render-specific asymmetry that silently breaks the build if
+    # you write ./Dockerfile here and expect rootDir to apply.
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      # Anything other than "dev" makes config.Load() require JWT_SECRET, which
+      # is what keeps a deploy from quietly running on a per-boot throwaway
+      # secret that invalidates every token on restart.
+      - key: APP_ENV
+        value: demo
+
+      # Render generates a random 256-bit value once and then keeps it stable
+      # across deploys, so issued tokens survive a redeploy.
+      - key: JWT_SECRET
+        generateValue: true
+
+      # NOT the image's /data default. WORKDIR creates /data owned by root and
+      # the image runs as nonroot, so with no volume mounted SQLite cannot
+      # create app.db there. /tmp is world-writable in distroless, and naming
+      # it /tmp states the honest lifetime of this data on a free instance.
+      - key: DB_PATH
+        value: /tmp/app.db
+
+      # Recreate the demo accounts on every boot — see the note above.
+      - key: ZOA_SEED_DEMO
+        value: "true"
+
+      # Wide open on purpose. A Blueprint cannot reference another service's
+      # public URL (fromService exposes only private-network host/port, which
+      # free services cannot even receive), so pinning the exact static-site
+      # origin here would mean hand-editing this file after the first deploy.
+      # Safe for this app: auth travels in an Authorization header, not a
+      # cookie, so there are no credentialed cross-origin requests to protect.
+      - key: CORS_ORIGINS
+        value: "*"
+
+      # Explicit rather than inferred. With no ANTHROPIC_API_KEY the config
+      # would resolve to "mock" anyway, but saying so here means the deploy
+      # cannot start billing real vision calls the moment a key is added to the
+      # environment for some unrelated reason.
+      - key: ZOA_CLASSIFY_PROVIDER
+        value: mock
+
+  - type: web
+    name: zoa-web
+    runtime: static
+    rootDir: app/zoa
+    buildCommand: ./render-build.sh
+    # Also relative to the repo root, so rootDir is repeated here.
+    staticPublishPath: ./app/zoa/build/web
+    routes:
+      # Flutter web routes on the client, so a deep link or a refresh on any
+      # path must still be served index.html rather than a 404.
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      # Baked into the bundle at build time by --dart-define, so changing it
+      # requires a rebuild, not just a restart.
+      #
+      # CHECK THIS AFTER THE FIRST DEPLOY. Render only grants
+      # <name>.onrender.com when the name is free workspace-wide; if it assigns
+      # zoa-api a suffixed hostname, correct this value and redeploy zoa-web.
+      - key: ZOA_API_BASE_URL
+        value: https://zoa-api.onrender.com

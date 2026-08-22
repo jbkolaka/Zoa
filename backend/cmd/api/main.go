@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -30,6 +31,14 @@ func main() {
 	migrateOnly := flag.Bool("migrate-only", false, "apply migrations, print the schema state, then exit")
 	seedDemo := flag.Bool("seed-demo", false, "create the demo accounts (recycler, collector, partner staff, admin) if missing")
 	flag.Parse()
+
+	// A container image is configured with environment variables, not argv, so
+	// the same seeding is reachable through ZOA_SEED_DEMO. The free-tier deploy
+	// depends on it: that filesystem is ephemeral, so every restart and every
+	// wake from spin-down starts on an empty database, and without re-seeding
+	// there would be no account left to sign in with. Safe to leave on — seeding
+	// is idempotent and never modifies an account that already exists.
+	shouldSeed := *seedDemo || envTrue("ZOA_SEED_DEMO")
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -64,7 +73,7 @@ func main() {
 		log.Fatalf("auth: %v", err)
 	}
 
-	if *seedDemo {
+	if shouldSeed {
 		if err := seedDemoUsers(conn); err != nil {
 			log.Fatalf("seed: %v", err)
 		}
@@ -128,6 +137,17 @@ func buildTokenIssuer(cfg *config.Config) (*auth.TokenIssuer, error) {
 	}
 
 	return auth.NewTokenIssuer(secret)
+}
+
+// envTrue reports whether an environment variable holds a truthy value. Render
+// and most container hosts can only supply strings, so "true"/"1" both count
+// rather than requiring one exact spelling.
+func envTrue(key string) bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv(key))) {
+	case "1", "true", "yes", "on":
+		return true
+	}
+	return false
 }
 
 // seedDemoUsers creates the demo accounts, reporting which were added and which

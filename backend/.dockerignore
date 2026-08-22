@@ -1,0 +1,23 @@
+# Keep the build context to what actually compiles.
+#
+# Docker honours this file, not .gitignore — so without it `COPY . .` sweeps in
+# whatever is lying around the working tree. Two things make that more than an
+# efficiency question here: backend/app.db is tracked in git, so a real database
+# would be baked into a build layer, and .env holds JWT_SECRET and any API key.
+# Neither reaches the final image (that stage copies only the binary), but both
+# would sit in the build stage's cached layers.
+
+.env
+.env.*
+!.env.example
+
+# SQLite database plus its write-ahead log and shared-memory sidecars.
+*.db
+*.db-shm
+*.db-wal
+
+Dockerfile
+.dockerignore
+Makefile
+README.md
+*.md
