@@ -93,10 +93,11 @@ services:
         destination: /index.html
     envVars:
       # Baked into the bundle at build time by --dart-define, so changing it
-      # requires a rebuild, not just a restart.
+      # requires a rebuild of zoa-web, not just a restart.
       #
-      # CHECK THIS AFTER THE FIRST DEPLOY. Render only grants
-      # <name>.onrender.com when the name is free workspace-wide; if it assigns
-      # zoa-api a suffixed hostname, correct this value and redeploy zoa-web.
+      # The -qwxb suffix is not decoration: Render grants <name>.onrender.com
+      # only when that name is free across all of Render, and "zoa-api" was
+      # taken. Renaming the service would change this host again, so anything
+      # that hardcodes it has to be updated in step.
       - key: ZOA_API_BASE_URL
-        value: https://zoa-api.onrender.com
+        value: https://zoa-api-qwxb.onrender.com
